@@ -3,58 +3,80 @@ from pytesseract import Output
 import cv2
 
 
-img = cv2.imread("test2.png")
+img = cv2.imread("test.png")
 
-print(pytesseract.image_to_string(img))
 
-# Boxes around Characters
-"""h,w,c = img.shape
-boxes = pytesseract.image_to_boxes(img)
-for b in boxes.splitlines():
-	b = b.split(' ')
-	img = cv2.rectangle(img, (int(b[1]), h - int(b[2])), (int(b[3]), h - int(b[4])), (0, 255, 0), 2)
-"""
+text = pytesseract.image_to_string(img)
+print(text)
+
+ha = text.split('\n')
+
+
+sentences = []
+phrase = ""
+for i in ha:
+	
+	if i == "" or i=='\x0c':
+		sentences.append(phrase)
+		phrase = ""
+
+	phrase += i + " "
+
+
+words = []
+for i in range(len(sentences)):
+	words.append(sentences[i].split(" "))
+	while True:
+		try:
+			words[i].remove("")
+		except ValueError:
+			break
+#print(words)
+#print(sentences)
+
 
 d = pytesseract.image_to_data(img, output_type=Output.DICT)
 
-info = []
+coor = []
 
 n_boxes = len(d['text'])
 for i in range(n_boxes):
     if int(d['conf'][i]) > 60:
         (text, x, y, w, h) = (d['text'][i], d['left'][i], d['top'][i], d['width'][i], d['height'][i])
-        info.append((text, x, y, w, h))
-        img = cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
+        coor.append((x, y, w, h))
+        
+        # put rectangle around words
+        # img = cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
-#print(info)
-
-sentences = []
-horizontal_padding = 30
-vertical_padding = 20
-
-search = 0
-
-
-
-while search < len(info) - 2:
-	
-
-	words = [info[search]]
-
-	while info[search+1][1] < info[search][1] + info[search][3] + horizontal_padding and info[search][2] - vertical_padding < info[search+1][2] < info[search][2] + vertical_padding:
-		words.append(info[search+1])
-		search += 1
-
-		if search == len(info) - 1:
-			break
-
-	search += 1
-	
-	sentences.append(words)
-	
+count = 0
+box_coor = []
+for i in words:
+	x_max = 0
+	x_min = 100000 # something really big
+	y_max = 0
+	y_min = 100000 # somthing really big
+	for x in range(len(i)):
 		
+		if coor[count][0] + coor[count][2] > x_max:
+			x_max = coor[count][0] + coor[count][2]
 
-print(sentences)
+		if coor[count][0] < x_min:
+			x_min = coor[count][0]
+
+		if coor[count][1] + coor[count][3] > y_max:
+			y_max = coor[count][1] + coor[count][3]
+
+		if coor[count][1] < y_min:
+			y_min = coor[count][1]
+		
+		count += 1
+
+
+	box_coor.append((x_min, y_min, x_max, y_max))
+
+print(box_coor)
+for i in box_coor:
+	img = cv2.rectangle(img, (i[0], i[1]), (i[2], i[3]), (0, 255, 0), 2)
 
 cv2.imshow('img', img)
 cv2.waitKey(0)
