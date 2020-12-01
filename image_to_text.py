@@ -3,11 +3,11 @@ from pytesseract import Output
 import cv2
 
 
-img = cv2.imread("test.png")
+img = cv2.imread("images\\test2.png")
 
 
 text = pytesseract.image_to_string(img)
-print(text)
+# print(text)
 
 ha = text.split('\n')
 
@@ -31,52 +31,48 @@ for i in range(len(sentences)):
 			words[i].remove("")
 		except ValueError:
 			break
-#print(words)
-#print(sentences)
+
+print(words)
+par_num = []
+count = 0
+for i in words:
+	for j in range(len(i)):
+		par_num += [count]
+
+	count += 1
+
+print(count)
+print(par_num)
 
 
 d = pytesseract.image_to_data(img, output_type=Output.DICT)
 
-coor = []
 
 n_boxes = len(d['text'])
+box_coor = [[100000, 100000, 0, 0] for x in range(count)]
+
+num = 0
 for i in range(n_boxes):
     if int(d['conf'][i]) > 60:
-        (text, x, y, w, h) = (d['text'][i], d['left'][i], d['top'][i], d['width'][i], d['height'][i])
-        coor.append((x, y, w, h))
+        (par, x, y, w, h) = (par_num[num], d['left'][i], d['top'][i], d['width'][i], d['height'][i])
         
-        # put rectangle around words
-        # img = cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
+        if x + w > box_coor[par][2]:
+        	box_coor[par][2] = x + w
+        if x < box_coor[par][0]:
+        	box_coor[par][0] = x
+        if y + h > box_coor[par][3]:
+        	box_coor[par][3] = y + h
+        if y < box_coor[par][1]:
+        	box_coor[par][1] = y
+        num += 1
 
-count = 0
-box_coor = []
-for i in words:
-	x_max = 0
-	x_min = 100000 # something really big
-	y_max = 0
-	y_min = 100000 # somthing really big
-	for x in range(len(i)):
-		
-		if coor[count][0] + coor[count][2] > x_max:
-			x_max = coor[count][0] + coor[count][2]
+        
+print('new box coor ', str(box_coor))
 
-		if coor[count][0] < x_min:
-			x_min = coor[count][0]
-
-		if coor[count][1] + coor[count][3] > y_max:
-			y_max = coor[count][1] + coor[count][3]
-
-		if coor[count][1] < y_min:
-			y_min = coor[count][1]
-		
-		count += 1
-
-
-	box_coor.append((x_min, y_min, x_max, y_max))
-
-print(box_coor)
 for i in box_coor:
 	img = cv2.rectangle(img, (i[0], i[1]), (i[2], i[3]), (0, 255, 0), 2)
 
-cv2.imshow('img', img)
-cv2.waitKey(0)
+
+
+# cv2.imshow('img', img)
+# cv2.waitKey(0)
