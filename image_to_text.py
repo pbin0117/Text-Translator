@@ -1,78 +1,104 @@
 import pytesseract
 from pytesseract import Output
 import cv2
+import time
+
+def show_box(box_coor, img):
+	# for showing the boxes
+	for i in box_coor:
+		img = cv2.rectangle(img, (i[0], i[1]), (i[2], i[3]), (0, 255, 0), 2)
 
 
-img = cv2.imread("images\\test2.png")
+
+	cv2.imshow('img', img)
+	cv2.waitKey(0)
 
 
-text = pytesseract.image_to_string(img)
-# print(text)
 
-ha = text.split('\n')
+def assign_box_coor(count, d, par_num):
+	n_boxes = len(d['text'])
+	box_coor = [[100000, 100000, 0, 0] for x in range(count)]
 
-
-sentences = []
-phrase = ""
-for i in ha:
 	
-	if i == "" or i=='\x0c':
-		sentences.append(phrase)
-		phrase = ""
+	num = 0
+	for i in range(n_boxes):
+	    if int(d['conf'][i]) > 60:
+	        (par, x, y, w, h) = (par_num[num], d['left'][i], d['top'][i], d['width'][i], d['height'][i])
+	        
+	        if x + w > box_coor[par][2]:
+	        	box_coor[par][2] = x + w
+	        if x < box_coor[par][0]:
+	        	box_coor[par][0] = x
+	        if y + h > box_coor[par][3]:
+	        	box_coor[par][3] = y + h
+	        if y < box_coor[par][1]:
+	        	box_coor[par][1] = y
+	        num += 1
 
-	phrase += i + " "
+	return box_coor
 
+def form_sentence(text):
+	sentences = []
+	phrase = ""
+	for i in text:
+		
+		if i == "" or i=='\x0c':
+			sentences.append(phrase)
+			phrase = ""
 
-words = []
-for i in range(len(sentences)):
-	words.append(sentences[i].split(" "))
-	while True:
-		try:
-			words[i].remove("")
-		except ValueError:
-			break
+		phrase += i + " "
 
-print(words)
-par_num = []
-count = 0
-for i in words:
-	for j in range(len(i)):
-		par_num += [count]
+	return sentences
 
-	count += 1
+def get_par_num(sentences):
+	par_num = []
+	count = 0
 
-print(count)
-print(par_num)
+	for i in range(len(sentences)):
 
+		aa = 1 if i == 0 else 2
 
-d = pytesseract.image_to_data(img, output_type=Output.DICT)
+		num_words = len(sentences[i].split(" "))-aa
 
+		for j in range(num_words):
+			par_num += [count]
 
-n_boxes = len(d['text'])
-box_coor = [[100000, 100000, 0, 0] for x in range(count)]
+		count += 1
 
-num = 0
-for i in range(n_boxes):
-    if int(d['conf'][i]) > 60:
-        (par, x, y, w, h) = (par_num[num], d['left'][i], d['top'][i], d['width'][i], d['height'][i])
-        
-        if x + w > box_coor[par][2]:
-        	box_coor[par][2] = x + w
-        if x < box_coor[par][0]:
-        	box_coor[par][0] = x
-        if y + h > box_coor[par][3]:
-        	box_coor[par][3] = y + h
-        if y < box_coor[par][1]:
-        	box_coor[par][1] = y
-        num += 1
+	return par_num, count
 
-        
-print('new box coor ', str(box_coor))
+def image_to_text(img):
 
-for i in box_coor:
-	img = cv2.rectangle(img, (i[0], i[1]), (i[2], i[3]), (0, 255, 0), 2)
+	text = pytesseract.image_to_string(img)
+	actual_text = text.split('\n')
 
+	# creates a list of sentences for each paragraph
+	sentences = form_sentence(actual_text)
 
 
-# cv2.imshow('img', img)
-# cv2.waitKey(0)
+	# assign paragraph number to each word
+	par_num, count = get_par_num(sentences)
+		
+
+	# getting coordinates for each sentence blocks
+	d = pytesseract.image_to_data(img, output_type=Output.DICT)
+	box_coor = assign_box_coor(count, d, par_num)
+
+
+	return sentences, box_coor
+	
+
+if __name__ == "__main__":
+	startTime = time.time()
+
+	img = cv2.imread("images\\test.png")
+
+	sentences, box_coor = image_to_text(img)
+
+	print('box coor: ', str(box_coor))
+	print("run time: ", str(round(time.time() - startTime, 3)), "s")
+
+	show_box(box_coor, img)
+	
+
+	
