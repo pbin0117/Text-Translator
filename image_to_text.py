@@ -3,6 +3,11 @@ from pytesseract import Output
 import cv2
 import time
 
+def preprocessing_typing_detection(inputImage):
+    img_gray = cv2.cvtColor(inputImage, cv2.COLOR_BGR2GRAY)
+    
+    return img_gray
+
 def show_box(box_coor, img):
 	# for showing the boxes
 	for i in box_coor:
@@ -19,6 +24,9 @@ def assign_box_coor(count, d, par_num):
 	n_boxes = len(d['text'])
 	box_coor = [[100000, 100000, 0, 0] for x in range(count)]
 
+	# for errors of the ocr
+	for i in range(n_boxes-len(par_num)):
+		par_num.append(0)
 	
 	num = 0
 	for i in range(n_boxes):
@@ -58,7 +66,9 @@ def get_par_num(sentences):
 
 		aa = 1 if i == 0 else 2
 
+
 		num_words = len(sentences[i].split(" "))-aa
+		
 
 		for j in range(num_words):
 			par_num += [count]
@@ -67,9 +77,10 @@ def get_par_num(sentences):
 
 	return par_num, count
 
-def image_to_text(img):
+def image_to_text(img, language):
+	img = preprocessing_typing_detection(img)
 
-	text = pytesseract.image_to_string(img)
+	text = pytesseract.image_to_string(img, lang=language)
 	actual_text = text.split('\n')
 
 	# creates a list of sentences for each paragraph
@@ -81,7 +92,7 @@ def image_to_text(img):
 		
 
 	# getting coordinates for each sentence blocks
-	d = pytesseract.image_to_data(img, output_type=Output.DICT)
+	d = pytesseract.image_to_data(img, output_type=Output.DICT, lang=language)
 	box_coor = assign_box_coor(count, d, par_num)
 
 
@@ -91,9 +102,9 @@ def image_to_text(img):
 if __name__ == "__main__":
 	startTime = time.time()
 
-	img = cv2.imread("images\\test.png")
+	img = cv2.imread("images\\test_spa2.png")
 
-	sentences, box_coor = image_to_text(img)
+	sentences, box_coor = image_to_text(img, "spa")
 
 	print('box coor: ', str(box_coor))
 	print("run time: ", str(round(time.time() - startTime, 3)), "s")
