@@ -7,7 +7,7 @@ import cv2
 
 startTime = time.time()
 
-img = cv2.imread("images\\test3.png")
+img = cv2.imread("images\\test4.png")
 
 print("load time: ", str(round(time.time() - startTime, 3)), "s")
 
